@@ -1,0 +1,46 @@
+#!/bin/zsh
+
+
+# Exit early if nothing staged
+if git diff --cached --quiet; then
+  echo "No staged changes. Nothing to do. 👋" >&2
+  exit 0
+fi
+
+# Exit quietly if already in a rebase
+if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+  echo "You're already in the middle of a rebase. Not touching anything. 👻" >&2
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/choose-root-branch"
+[[ -z "$ROOT_BRANCH" ]] && {
+  echo "Could not determine root branch" >&2
+  exit 1
+}
+
+COMMITS=$(git log HEAD ^origin/"$ROOT_BRANCH" --oneline | awk 'NR==1{$0=$0" ← latest commit"} {print}')
+
+CHOSEN_LINE=$(echo "$COMMITS" | gum choose --header="Choose a commit to apply fixup")
+
+[[ -z "$CHOSEN_LINE" ]] && {
+  echo "No commit selected. Aborting. 👋" >&2
+  exit 1
+}
+
+COMMIT_HASH=$(echo "$CHOSEN_LINE" | awk '{print $1}')
+
+git commit --fixup="$COMMIT_HASH"
+
+# Exit if there are pending changes
+if ! git diff --quiet; then
+  exit 0
+fi
+
+# Simple with interactive
+git rebase -i --autosquash origin/"$ROOT_BRANCH"
+
+# Merges without prompt
+# GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash origin/"$ROOT_BRANCH"
+

@@ -1,0 +1,41 @@
+#!/bin/zsh
+
+CONFIG_FILE=".rScripts"
+
+FORCE_RESELECT=false
+if [[ "$1" == "--reset" ]]; then
+  FORCE_RESELECT=true
+fi
+
+# # Create the config file if it doesn't exist
+[[ -f "$CONFIG_FILE" ]] || touch "$CONFIG_FILE"
+source "$CONFIG_FILE"
+
+if [[ "$FORCE_RESELECT" == true || -z "$ROOT_BRANCH" ]]; then
+  echo "Fetching branch list..."
+
+  # run the slow branch-fetch in background and show spinner
+  BRANCHES=$(gum spin --title "Fetching branches from origin..." --show-output -- bash -c '
+    git ls-remote --heads origin |
+    awk "{print \$2}" |
+    sed "s|refs/heads/||" |
+    grep -E "^main$|^feature/" |
+    sort |
+    awk "BEGIN{main=\"\"; others=\"\"} \$0==\"main\"{main=\$0} \$0!=\"main\"{others=others \$0 ORS} END{if(main!=\"\") print main; printf \"%s\", others}"
+  ')
+
+  ROOT_BRANCH=$(echo "$BRANCHES" | gum choose --header="Choose root branch you're currently working against")
+
+  [[ -z "$ROOT_BRANCH" ]] && {
+    echo "No branch selected. Aborting. 👋" >&2
+    exit 1
+  }
+
+   # Update or add to config file
+  if grep -q '^ROOT_BRANCH=' "$CONFIG_FILE"; then
+    sed -i '' "s|^ROOT_BRANCH=.*|ROOT_BRANCH=$ROOT_BRANCH|" "$CONFIG_FILE"
+    echo "ROOT_BRANCH updated to $ROOT_BRANCH"
+  else
+    echo "ROOT_BRANCH=$ROOT_BRANCH" >> "$CONFIG_FILE"
+  fi
+fi
