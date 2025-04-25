@@ -1,0 +1,18 @@
+#!/bin/zsh
+# Opens browser to current branch's Jira issue
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Regex to extract JIRA issue code (like DSHARE-1234)
+ISSUE_CODE=$(echo "$BRANCH" | grep -oiE '[A-Z]+-[0-9]+')
+
+if [[ -z "$ISSUE_CODE" ]]; then
+  echo "No JIRA issue code found in branch name"
+  exit 1
+fi
+
+URL="https://dinari.atlassian.net/browse/$ISSUE_CODE"
+echo "Opening $URL 🌀"
+
+# Open in default browser
+open "$URL"
