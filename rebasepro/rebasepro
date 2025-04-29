@@ -1,5 +1,26 @@
 #!/bin/zsh
+ACTION=""
+args=("$@")
 
+for idx in {1..$#args}; do
+  if [[ "${args[idx]}" == "--" ]]; then
+    next_idx=$((idx + 1))
+    ACTION="${args[next_idx]}"
+    break
+  fi
+done
+
+if [[ -z "$ACTION" ]]; then
+  echo "No action provided. Usage: rebasepro -- <action>"
+  exit 1
+fi
+
+if [[ "$ACTION" != "fixup" ]]; then
+  echo "Action '$ACTION' not implemented."
+  exit 1
+fi
+
+echo "Running fixup..."
 
 # Exit early if nothing staged
 if git diff --cached --quiet; then
@@ -16,7 +37,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/choose-root-branch"
 [[ -z "$ROOT_BRANCH" ]] && {
-  echo "Could not determine root branch" >&2
+  echo "Could not determine root branch 🤷" >&2
   exit 1
 }
 
@@ -31,7 +52,7 @@ CHOSEN_LINE=$(echo "$COMMITS" | gum choose --header="Choose a commit to apply fi
 
 COMMIT_HASH=$(echo "$CHOSEN_LINE" | awk '{print $1}')
 
-git commit --fixup="$COMMIT_HASH"
+git commit --fixup="$COMMIT_HASH" || exit 1
 
 # Exit if there are pending changes
 if ! git diff --quiet; then
@@ -39,7 +60,7 @@ if ! git diff --quiet; then
 fi
 
 # Simple with interactive
-git rebase -i --autosquash origin/"$ROOT_BRANCH"
+git rebase -i --autostash --autosquash origin/"$ROOT_BRANCH"
 
 # Merges without prompt
 # GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash origin/"$ROOT_BRANCH"
