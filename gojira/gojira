@@ -1,9 +1,20 @@
 #!/bin/zsh
-# Opens browser to current branch's Jira issue
+# Opens browser to Jira issue for current branch or selected branch
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# Check for -i flag
+if [[ "$1" == "-i" ]]; then
+  echo "Fetching branches starting with randolf-tjandra..."
+  BRANCH=$(git branch --format="%(refname:short)" | grep '^randolf-tjandra' | gum choose)
+else
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+fi
 
-# Regex to extract JIRA issue code (like DSHARE-1234)
+if [[ -z "$BRANCH" ]]; then
+  echo "No branch selected or found"
+  exit 1
+fi
+
+# Extract Jira issue code (like DSHARE-1234)
 ISSUE_CODE=$(echo "$BRANCH" | grep -oiE '[A-Z]+-[0-9]+')
 
 if [[ -z "$ISSUE_CODE" ]]; then
@@ -14,5 +25,5 @@ fi
 URL="https://dinari.atlassian.net/browse/$ISSUE_CODE"
 echo "Opening $URL 🌀"
 
-# Open in default browser
 open "$URL"
+
