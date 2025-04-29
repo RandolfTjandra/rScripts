@@ -1,10 +1,24 @@
 #!/bin/zsh
 # Opens browser to Jira issue for current branch or selected branch
 
-# Check for -i flag
-if [[ "$1" == "-i" ]]; then
-  echo "Fetching branches starting with randolf-tjandra..."
-  BRANCH=$(git branch --format="%(refname:short)" | grep '^randolf-tjandra' | gum choose)
+# Make sure gum is installed
+gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first."; exit 1; }
+
+# Get GitHub username from git config
+RAW_NAME=$(git config user.name)
+
+if [[ -z "$RAW_NAME" ]]; then
+  echo "Git user.name not found in git config"
+  exit 1
+fi
+
+# Transform name: lowercase and replace spaces with dashes
+GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+
+# Check for -i or --interactive flag
+if [[ "$1" == "-i" || "$1" == "--interactive" ]]; then
+  echo "Fetching branches starting with $GITHUB_USERNAME..."
+  BRANCH=$(git branch --format="%(refname:short)" | grep "^$GITHUB_USERNAME" | gum choose)
 else
   BRANCH=$(git rev-parse --abbrev-ref HEAD)
 fi
@@ -26,4 +40,3 @@ URL="https://dinari.atlassian.net/browse/$ISSUE_CODE"
 echo "Opening $URL 🌀"
 
 open "$URL"
-
