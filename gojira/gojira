@@ -37,6 +37,6 @@ if [[ -z "$ISSUE_CODE" ]]; then
 fi
 
 URL="https://dinari.atlassian.net/browse/$ISSUE_CODE"
-echo "Opening $URL 🌀"
+echo "Opening $URL 🦖"
 
 open "$URL"
