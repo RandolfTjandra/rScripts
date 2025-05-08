@@ -1,0 +1,47 @@
+#!/bin/zsh
+# Presents local list of branches to check out
+#
+# Make sure gum is installed
+gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first."; exit 1; }
+
+# Get GitHub username from git config
+RAW_NAME=$(git config user.name)
+
+if [[ -z "$RAW_NAME" ]]; then
+  echo "Git user.name not found in git config"
+  exit 1
+fi
+
+# Transform name: lowercase and replace spaces with dashes
+GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+
+# # Fetch local branches that are 'main', start with 'randolf-tjandra', or start with 'feature/'
+# BRANCH=$(
+#   {
+#     git branch --format="%(refname:short)" | grep -x "main"
+#     git branch --format="%(refname:short)" | grep -E "^($GITHUB_USERNAME|feature/)"
+#   } | gum choose
+# )
+
+# Get recently checked out branches starting with your username
+RECENT_USER_BRANCHES=$(git reflog | grep 'checkout:' | awk '{print $NF}' | grep "^$GITHUB_USERNAME" | awk '!seen[$0]++')
+
+# Get all feature/* branches
+FEATURE_BRANCHES=$(git branch --format="%(refname:short)" | grep "^feature/" | awk '!seen[$0]++')
+
+CHOICES=$(
+  {
+    echo "main"
+    echo "$FEATURE_BRANCHES"
+    echo "$RECENT_USER_BRANCHES"
+  }
+)
+
+BRANCH=$(echo "$CHOICES" | gum choose)
+
+# If the user selected a branch, checkout to it
+if [ -n "$BRANCH" ]; then
+  git checkout "$BRANCH"
+else
+  echo "No branch selected."
+fi
