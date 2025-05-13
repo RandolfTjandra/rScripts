@@ -15,14 +15,6 @@ fi
 # Transform name: lowercase and replace spaces with dashes
 GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 
-# # Fetch local branches that are 'main', start with 'randolf-tjandra', or start with 'feature/'
-# BRANCH=$(
-#   {
-#     git branch --format="%(refname:short)" | grep -x "main"
-#     git branch --format="%(refname:short)" | grep -E "^($GITHUB_USERNAME|feature/)"
-#   } | gum choose
-# )
-
 # Get recently checked out branches starting with your username
 RECENT_USER_BRANCHES=$(git reflog | grep 'checkout:' | awk '{print $NF}' | grep "^$GITHUB_USERNAME" | awk '!seen[$0]++')
 
