@@ -1,0 +1,20 @@
+# Add the following aliases to your ~/.gitconfig file to get the jira parsing command
+[alias]
+  create-branch = "!f() { \
+      url=\"$1\"; shift; \
+      context=\"$*\"; \
+      ticket=$(echo \"$url\" | grep -oE '[A-Z]+-[0-9]+'); \
+      if [ -z \"$ticket\" ]; then echo 'No ticket found in URL'; return 1; fi; \
+      ticket=$(echo \"$ticket\" | tr '[:upper:]' '[:lower:]'); \
+      user=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-'); \
+      if [ -n \"$context\" ]; then \
+        slug=$(echo \"$context\" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/-+/-/g' | sed -E 's/^-|-$//g'); \
+        branch=\"$user/$ticket-$slug\"; \
+      else \
+        branch=\"$user/$ticket\"; \
+      fi; \
+      git checkout -b \"$branch\"; \
+    }; f"
+
+  cb = create-branch
+
