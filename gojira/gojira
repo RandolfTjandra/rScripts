@@ -15,8 +15,24 @@ fi
 # Transform name: lowercase and replace spaces with dashes
 GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 
+# Flags
+INTERACTIVE=false
+COPY=false
+
+# Parse flags
+for arg in "$@"; do
+  case "$arg" in
+    -i|--interactive)
+      INTERACTIVE=true
+      ;;
+    -c|--copy)
+      COPY=true
+      ;;
+  esac
+done
+
 # Check for -i or --interactive flag
-if [[ "$1" == "-i" || "$1" == "--interactive" ]]; then
+if $INTERACTIVE; then
   echo "Fetching branches starting with $GITHUB_USERNAME..."
   BRANCH=$(git branch --format="%(refname:short)" | grep "^$GITHUB_USERNAME" | gum choose)
 else
@@ -37,6 +53,11 @@ if [[ -z "$ISSUE_CODE" ]]; then
 fi
 
 URL="https://dinari.atlassian.net/browse/$ISSUE_CODE"
-echo "Opening $URL 🦖"
 
-open "$URL"
+if $COPY; then
+  printf "%s" "$URL" | pbcopy
+  echo "Copied $URL to clipboard 📋"
+else
+  echo "Opening $URL 🦖"
+  open "$URL"
+fi
