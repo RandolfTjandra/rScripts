@@ -4,7 +4,7 @@
 # Make sure gum is installed
 gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first."; exit 1; }
 
-# Get GitHub username from git config
+# Get Git user.name from git config
 RAW_NAME=$(git config user.name)
 
 if [[ -z "$RAW_NAME" ]]; then
