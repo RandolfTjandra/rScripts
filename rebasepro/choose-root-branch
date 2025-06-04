@@ -36,7 +36,7 @@ if [[ "$FORCE_RESELECT" == true || -z "$ROOT_BRANCH" ]]; then
 
    # Update or add to config file
   if grep -q '^ROOT_BRANCH=' "$CONFIG_FILE"; then
-    sed -i '' "s|^ROOT_BRANCH=.*|ROOT_BRANCH=$ROOT_BRANCH|" "$CONFIG_FILE"
+    sed -i.bak "s|^ROOT_BRANCH=.*|ROOT_BRANCH=$ROOT_BRANCH|" "$CONFIG_FILE" && rm -f "$CONFIG_FILE.bak"
     echo "ROOT_BRANCH updated to $ROOT_BRANCH"
   else
     echo "ROOT_BRANCH=$ROOT_BRANCH" >> "$CONFIG_FILE"
