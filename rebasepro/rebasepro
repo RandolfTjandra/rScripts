@@ -2,7 +2,7 @@
 ACTION=""
 args=("$@")
 
-for idx in {1..$#args}; do
+for ((idx=1; idx <= $#args; idx++)); do
   if [[ "${args[idx]}" == "--" ]]; then
     next_idx=$((idx + 1))
     ACTION="${args[next_idx]}"
