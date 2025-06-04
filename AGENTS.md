@@ -7,7 +7,7 @@ This repository contains a collection of zsh utilities for git workflows. Keep c
 - Keep scripts POSIX compatible where possible and favor readability.
 - Place related scripts in their own directory with a README explaining their purpose and usage.
 - Update a directory's README whenever you change the functionality of its scripts.
-- Run `zsh -n <script>` on any modified scripts to check for syntax errors.
+- Run `bash -n <script>` on any modified scripts to check for syntax errors.
 - If `shellcheck` is available, run `shellcheck <script>` as well.
 - Ensure commit messages are short and use the imperative mood.
 
