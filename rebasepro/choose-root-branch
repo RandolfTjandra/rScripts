@@ -10,7 +10,7 @@ for arg in "$@"; do
   fi
 done
 
-# # Create the config file if it doesn't exist
+# Create the config file if it doesn't exist
 [[ -f "$CONFIG_FILE" ]] || touch "$CONFIG_FILE"
 source "$CONFIG_FILE"
 
