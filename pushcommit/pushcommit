@@ -1,0 +1,24 @@
+#!/bin/zsh
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../rebasepro/choose-root-branch"
+[[ -z "$ROOT_BRANCH" ]] && {
+  echo "Could not determine root branch 🤷" >&2
+  exit 1
+}
+
+COMMITS=$(git log HEAD ^origin/"$ROOT_BRANCH" --oneline | awk 'NR==1{$0=$0" ← latest commit"} {print}')
+CHOSEN_LINE=$(echo "$COMMITS" | gum choose --header="Choose a commit to push")
+[[ -z "$CHOSEN_LINE" ]] && {
+  echo "No commit selected. Aborting. 👋" >&2
+  exit 1
+}
+COMMIT_HASH=$(echo "$CHOSEN_LINE" | awk '{print $1}')
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+  git push origin "$COMMIT_HASH:$BRANCH"
+else
+  git push origin "$COMMIT_HASH:refs/heads/$BRANCH"
+fi
