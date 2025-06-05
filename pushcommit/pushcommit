@@ -47,7 +47,7 @@ fi
 }
 
 if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
-  git push origin "$COMMIT_HASH:$TARGET_BRANCH"
+  git push origin "${COMMIT_HASH}:${TARGET_BRANCH}"
 else
-  git push origin "$COMMIT_HASH:refs/heads/$TARGET_BRANCH"
+  git push origin "${COMMIT_HASH}:refs/heads/${TARGET_BRANCH}"
 fi
