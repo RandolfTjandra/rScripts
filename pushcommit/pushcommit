@@ -1,11 +1,24 @@
 #!/bin/zsh
 
+# Ensure gum is installed
+gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first." >&2; exit 1; }
+
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 source "$SCRIPT_DIR/../rebasepro/choose-root-branch"
 [[ -z "$ROOT_BRANCH" ]] && {
   echo "Could not determine root branch 🤷" >&2
   exit 1
 }
+
+TARGET_BRANCH=""
+args=("$@")
+for ((idx=1; idx <= $#args; idx++)); do
+  if [[ "${args[idx]}" == "--branch" ]]; then
+    next_idx=$((idx + 1))
+    TARGET_BRANCH="${args[next_idx]}"
+    break
+  fi
+done
 
 COMMITS=$(git log HEAD ^origin/"$ROOT_BRANCH" --oneline | awk 'NR==1{$0=$0" ← latest commit"} {print}')
 CHOSEN_LINE=$(echo "$COMMITS" | gum choose --header="Choose a commit to push")
@@ -15,10 +28,26 @@ CHOSEN_LINE=$(echo "$COMMITS" | gum choose --header="Choose a commit to push")
 }
 COMMIT_HASH=$(echo "$CHOSEN_LINE" | awk '{print $1}')
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ -z "$TARGET_BRANCH" ]]; then
+  RAW_NAME=$(git config user.name)
+  if [[ -z "$RAW_NAME" ]]; then
+    echo "Git user.name not found in git config" >&2
+    exit 1
+  fi
 
-if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-  git push origin "$COMMIT_HASH:$BRANCH"
+  GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+  RECENT_USER_BRANCHES=$(git reflog | grep 'checkout:' | awk '{print $NF}' | grep "^$GITHUB_USERNAME" | awk '!seen[$0]++')
+
+  TARGET_BRANCH=$(echo "$RECENT_USER_BRANCHES" | gum choose --header="Choose branch to push to")
+fi
+
+[[ -z "$TARGET_BRANCH" ]] && {
+  echo "No branch selected. Aborting. 👋" >&2
+  exit 1
+}
+
+if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
+  git push origin "$COMMIT_HASH:$TARGET_BRANCH"
 else
-  git push origin "$COMMIT_HASH:refs/heads/$BRANCH"
+  git push origin "$COMMIT_HASH:refs/heads/$TARGET_BRANCH"
 fi
