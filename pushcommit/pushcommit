@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 source "$SCRIPT_DIR/../rebasepro/choose-root-branch"
 [[ -z "$ROOT_BRANCH" ]] && {
   echo "Could not determine root branch 🤷" >&2
