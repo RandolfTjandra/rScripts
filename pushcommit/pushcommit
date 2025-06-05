@@ -26,7 +26,7 @@ CHOSEN_LINE=$(echo "$COMMITS" | gum choose --header="Choose a commit to push")
   echo "No commit selected. Aborting. 👋" >&2
   exit 1
 }
-COMMIT_HASH=$(echo "$CHOSEN_LINE" | awk '{print $1}')
+COMMIT_HASH=$(echo "$CHOSEN_LINE" | awk '{print $1}' | tr -d '[:space:]')
 
 if [[ -z "$TARGET_BRANCH" ]]; then
   RAW_NAME=$(git config user.name)

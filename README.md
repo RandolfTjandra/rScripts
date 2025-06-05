@@ -9,4 +9,4 @@ Directories:
 - `rebasepro` - interactive fixup and rebase helper
 - `switchbranch` - choose from recent branches to check out
 - `git_alias` - sample Git aliases for branch creation
-- `pushcommit` - select a commit and choose a branch to push it to
+- `pushcommit` - select a commit (relative to your root branch) and choose a branch to push it to
