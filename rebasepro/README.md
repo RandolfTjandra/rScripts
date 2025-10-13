@@ -39,9 +39,18 @@ You'll then be prompted to pick a commit that you want your new changes to be ap
 An interactive rebase with --autosquash will be launched assuming there are no additional
 unstaged changes.
 
+### Detailed instructions
+
+1. Make sure [Charmbracelet gum](https://github.com/charmbracelet/gum) is installed and available on your `PATH`; all prompts rely on it.
+2. Stage the changes you want to fold into an existing commit, then run `rebasepro -- fixup`. The `--` separator is required and `fixup` is currently the only supported action.
+3. On first run (or when passing `--reset`), the script fetches `main` plus any `feature/*` branches from `origin`, asks you to pick your working root branch, and caches the selection in `.rScripts`.
+4. After confirming you have staged changes and are not already in the middle of a rebase, the tool lists your commits ahead of `origin/<root>` and lets you choose a target commit for the fixup.
+5. The script creates a `git commit --fixup=<hash>` for the selected commit. If the working tree stays clean afterward, it launches `git rebase -i --autostash --autosquash origin/<root>` so you can finish the autosquash. If unstaged changes remain, it exits so you can resolve them first.
+
+Tip: run `rebasepro -- fixup --reset` whenever you need to point future fixups at a different root branch.
+
 ---
 
 ## 🔧 Options
 
 --reset - Use this option if you want to change your target working branch
-

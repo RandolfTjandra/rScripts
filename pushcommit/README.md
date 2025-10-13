@@ -1,6 +1,7 @@
 # pushcommit
 
-Select a commit and push it to origin. If the remote branch does not exist, the script creates it by pushing to `refs/heads/`.
+Select a commit and push it to origin. If the remote branch does not exist, 
+the script creates it by pushing to `refs/heads/`.
 
 The commit list starts from your configured *root branch*. This setting is shared with the
 `rebasepro` utilities via the `.rScripts` file. If you haven't chosen a root branch yet,

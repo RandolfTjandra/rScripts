@@ -4,6 +4,20 @@ Collection of small utilities for Git workflows.
 
 Each script lives in its own directory alongside a README that documents usage.
 
+## Quick Setup
+
+To symlink the main utilities (`rebasepro`, `pushcommit`, `gojira`, `switchbranch`) into your `~/bin` directory, run:
+
+```bash
+bash setup.sh
+```
+
+This will create or update symlinks in `~/bin/`. Make sure `~/bin` is in your `PATH`:
+
+```bash
+export PATH="$HOME/bin:$PATH"
+```
+
 Directories:
 - `gojira` - open Jira issues for the current branch
 - `rebasepro` - interactive fixup and rebase helper
