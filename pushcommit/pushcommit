@@ -3,8 +3,8 @@
 # Ensure gum is installed
 gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first." >&2; exit 1; }
 
-SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
-source "$SCRIPT_DIR/../rebasepro/choose-root-branch"
+command -v choose-root-branch >/dev/null 2>&1 || { echo "choose-root-branch command not found. Please run setup.sh or add it to your PATH." >&2; exit 1; }
+ROOT_BRANCH=$(choose-root-branch "$@") || exit $?
 [[ -z "$ROOT_BRANCH" ]] && {
   echo "Could not determine root branch 🤷" >&2
   exit 1

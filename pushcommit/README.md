@@ -3,9 +3,7 @@
 Select a commit and push it to origin. If the remote branch does not exist, 
 the script creates it by pushing to `refs/heads/`.
 
-The commit list starts from your configured *root branch*. This setting is shared with the
-`rebasepro` utilities via the `.rScripts` file. If you haven't chosen a root branch yet,
-run `rebasepro/choose-root-branch --reset` in your repository.
+The commit list starts from your configured *root branch*. This setting is cached in `.rScripts` via the `choose-root-branch` helper shared with `rebasepro`. If you haven't chosen a root branch yet, run `choose-root-branch --reset` in your repository.
 
 ## Installation
 

@@ -1,7 +1,9 @@
 #!/bin/zsh
 
-CONFIG_FILE=".rScripts"
+# Ensure gum is installed before doing anything interactive
+gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first." >&2; exit 1; }
 
+CONFIG_FILE=".rScripts"
 FORCE_RESELECT=false
 for arg in "$@"; do
   if [[ "$arg" == "--reset" ]]; then
@@ -10,14 +12,12 @@ for arg in "$@"; do
   fi
 done
 
-# Create the config file if it doesn't exist
 [[ -f "$CONFIG_FILE" ]] || touch "$CONFIG_FILE"
 source "$CONFIG_FILE"
 
 if [[ "$FORCE_RESELECT" == true || -z "$ROOT_BRANCH" ]]; then
-  echo "Fetching branch list..."
+  echo "Fetching branch list..." >&2
 
-  # run the slow branch-fetch in background and show spinner
   BRANCHES=$(gum spin --title "Fetching branches from origin..." --show-output -- bash -c '
     git ls-remote --heads origin |
     awk "{print \$2}" |
@@ -34,11 +34,18 @@ if [[ "$FORCE_RESELECT" == true || -z "$ROOT_BRANCH" ]]; then
     exit 1
   }
 
-   # Update or add to config file
   if grep -q '^ROOT_BRANCH=' "$CONFIG_FILE"; then
     sed -i.bak "s|^ROOT_BRANCH=.*|ROOT_BRANCH=$ROOT_BRANCH|" "$CONFIG_FILE" && rm -f "$CONFIG_FILE.bak"
-    echo "ROOT_BRANCH updated to $ROOT_BRANCH"
+    echo "ROOT_BRANCH updated to $ROOT_BRANCH" >&2
   else
     echo "ROOT_BRANCH=$ROOT_BRANCH" >> "$CONFIG_FILE"
+    echo "ROOT_BRANCH saved as $ROOT_BRANCH" >&2
   fi
 fi
+
+if [[ -z "$ROOT_BRANCH" ]]; then
+  echo "Could not determine root branch 🤷" >&2
+  exit 1
+fi
+
+printf "%s\n" "$ROOT_BRANCH"
