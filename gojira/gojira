@@ -18,18 +18,57 @@ GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 # Flags
 INTERACTIVE=false
 COPY=false
+GIVEN_NUMBER=""
 
-# Parse flags
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     -i|--interactive)
       INTERACTIVE=true
+      shift
       ;;
     -c|--copy)
       COPY=true
+      shift
+      ;;
+    -g|--goto)
+      if [[ -z "$2" ]]; then
+        echo "Usage: $0 [-i|--interactive] [-c|--copy] [-g|--goto number]" >&2
+        exit 1
+      fi
+      GIVEN_NUMBER="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      echo "Usage: $0 [-i|--interactive] [-c|--copy] [-g|--goto number]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      echo "Usage: $0 [-i|--interactive] [-c|--copy] [-g|--goto number]" >&2
+      exit 1
       ;;
   esac
 done
+
+# If -g is provided, go straight to that issue
+if [[ -n "$GIVEN_NUMBER" ]]; then
+  ISSUE_CODE="DSHARE-$GIVEN_NUMBER"
+  URL="https://dinari.atlassian.net/browse/$ISSUE_CODE"
+
+  if $COPY; then
+    printf "%s" "$URL" | pbcopy
+    echo "Copied $URL to clipboard 📋"
+  else
+    echo "Opening $URL 💨"
+    open "$URL"
+  fi
+
+  exit 0
+fi
 
 # Check for -i or --interactive flag
 if $INTERACTIVE; then
