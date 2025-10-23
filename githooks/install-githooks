@@ -1,0 +1,102 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+_err() {
+  printf '%s\n' "$1" >&2
+}
+
+resolve_path() {
+  # Resolve symlinks and produce an absolute path
+  local target="$1"
+  if [ -z "$target" ]; then
+    return 1
+  fi
+  case "$target" in
+    /*) ;; # already absolute
+    *) target="$(pwd)/$target" ;;
+  esac
+  while [ -L "$target" ]; do
+    local link
+    link=$(readlink "$target")
+    case "$link" in
+      /*) target="$link" ;;
+      *) target="$(dirname "$target")/$link" ;;
+    esac
+  done
+  local dir
+  dir=$(dirname "$target")
+  local base
+  base=$(basename "$target")
+  local absdir
+  absdir=$(cd "$dir" >/dev/null 2>&1 && pwd)
+  printf '%s\n' "$absdir/$base"
+}
+
+SCRIPT_SOURCE="$0"
+if [ "${SCRIPT_SOURCE#/}" = "$SCRIPT_SOURCE" ]; then
+  SCRIPT_SOURCE=$(command -v -- "$SCRIPT_SOURCE")
+fi
+SCRIPT_PATH=$(resolve_path "$SCRIPT_SOURCE")
+SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+INSTALLER_NAME=$(basename "$SCRIPT_PATH")
+HOOKS_SOURCE_DIR="$SCRIPT_DIR"
+
+if ! command -v git >/dev/null 2>&1; then
+  _err "git is required to install hooks"
+  exit 1
+fi
+
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null) || {
+  _err "Not inside a git repository"
+  exit 1
+}
+
+if [ "${GIT_DIR#/}" = "$GIT_DIR" ]; then
+  TOP_LEVEL=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    _err "Unable to determine repository root"
+    exit 1
+  }
+  GIT_DIR="$TOP_LEVEL/$GIT_DIR"
+fi
+
+TARGET_HOOKS_DIR="$GIT_DIR/hooks"
+mkdir -p "$TARGET_HOOKS_DIR"
+
+FOUND=0
+for hook_script in "$HOOKS_SOURCE_DIR"/*; do
+  [ -f "$hook_script" ] || continue
+  hook_name=$(basename "$hook_script")
+  case "$hook_name" in
+    "$INSTALLER_NAME"|README.md) continue ;;
+  esac
+  FOUND=1
+  chmod +x "$hook_script"
+  dest="$TARGET_HOOKS_DIR/$hook_name"
+  if [ -L "$dest" ]; then
+    current=$(readlink "$dest")
+    if [ "$current" = "$hook_script" ]; then
+      printf 'Hook %s already linked\n' "$hook_name"
+      continue
+    fi
+  fi
+  if [ -e "$dest" ]; then
+    backup="$dest.bak"
+    idx=1
+    while [ -e "$backup" ]; do
+      backup="$dest.bak.$idx"
+      idx=$((idx + 1))
+    done
+    printf 'Existing hook %s moved to %s\n' "$dest" "$backup"
+    mv "$dest" "$backup"
+  fi
+  ln -s "$hook_script" "$dest"
+  printf 'Linked %s -> %s\n' "$dest" "$hook_script"
+done
+
+if [ "$FOUND" -eq 0 ]; then
+  printf 'No hook scripts found in %s\n' "$HOOKS_SOURCE_DIR"
+  exit 0
+fi
+
+printf 'Hooks installed to %s\n' "$TARGET_HOOKS_DIR"

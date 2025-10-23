@@ -8,7 +8,14 @@
 
 set -e
 
-UTILS=("rebasepro/rebasepro" "pushcommit/pushcommit" "choose-root-branch/choose-root-branch" "gojira/gojira" "switchbranch/switchbranch")
+UTILS=(
+    "rebasepro/rebasepro"
+    "pushcommit/pushcommit"
+    "choose-root-branch/choose-root-branch"
+    "gojira/gojira"
+    "switchbranch/switchbranch"
+    "githooks/install-githooks"
+)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="$HOME/bin"
 
