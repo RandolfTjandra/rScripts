@@ -13,6 +13,7 @@ UTILS=(
     "pushcommit/pushcommit"
     "choose-root-branch/choose-root-branch"
     "gojira/gojira"
+    "gol/gol"
     "switchbranch/switchbranch"
     "githooks/install-githooks"
 )

@@ -6,7 +6,7 @@ Each script lives in its own directory alongside a README that documents usage.
 
 ## Quick Setup
 
-To symlink the main utilities (`rebasepro`, `pushcommit`, `choose-root-branch`, `gojira`, `switchbranch`) into your `~/bin` directory, run:
+To symlink the main utilities (`rebasepro`, `pushcommit`, `choose-root-branch`, `gojira`, `gol`, `switchbranch`) into your `~/bin` directory, run:
 
 ```bash
 bash setup.sh
@@ -20,6 +20,7 @@ export PATH="$HOME/bin:$PATH"
 
 Directories:
 - `gojira` - open Jira issues for the current branch
+- `gol` - open a Linear issue from your current branch or by ID
 - `rebasepro` - interactive fixup and rebase helper
 - `choose-root-branch` - pick and cache a root branch for the current repo
 - `switchbranch` - choose from recent branches to check out

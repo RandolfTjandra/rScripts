@@ -1,0 +1,120 @@
+#!/bin/zsh
+# Opens a Linear issue for the current branch or a selected branch
+
+# Make sure gum is installed
+gum --version >/dev/null 2>&1 || { echo "gum is not installed. Please install it first."; exit 1; }
+
+# Get Git user.name from git config
+RAW_NAME=$(git config user.name)
+
+if [[ -z "$RAW_NAME" ]]; then
+  echo "Git user.name not found in git config"
+  exit 1
+fi
+
+# Transform name: lowercase and replace spaces with dashes
+GITHUB_USERNAME=$(echo "$RAW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+
+# Flags
+INTERACTIVE=false
+COPY=false
+GOTO_VALUE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -i|--interactive)
+      INTERACTIVE=true
+      shift
+      ;;
+    -c|--copy)
+      COPY=true
+      shift
+      ;;
+    -g|--goto)
+      if [[ -z "$2" ]]; then
+        echo "Usage: $0 [-i|--interactive] [-c|--copy] [-g|--goto issue]" >&2
+        exit 1
+      fi
+      GOTO_VALUE="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      echo "Usage: $0 [-i|--interactive] [-c|--copy] [-g|--goto issue]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      echo "Usage: $0 [-i|--interactive] [-c|--copy] [-g|--goto issue]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+resolve_issue_code() {
+  local raw_value="$1"
+  local default_prefix="${GOL_DEFAULT_PREFIX:-DEV}"
+
+  if [[ -z "$raw_value" ]]; then
+    echo ""
+    return
+  fi
+
+  if [[ "$raw_value" =~ ^[A-Za-z]+-[0-9]+$ ]]; then
+    echo "$raw_value"
+  else
+    echo "${default_prefix}-${raw_value}"
+  fi
+}
+
+open_issue() {
+  local issue_code="$1"
+  local url="linear://issue/${issue_code}"
+
+  if $COPY; then
+    printf "%s" "$url" | pbcopy
+    echo "Copied $url to clipboard 📋"
+  else
+    echo "Opening $url 🚀"
+    open "$url"
+  fi
+}
+
+# If -g is provided, go straight to that issue
+if [[ -n "$GOTO_VALUE" ]]; then
+  ISSUE_CODE=$(resolve_issue_code "$GOTO_VALUE")
+
+  if [[ -z "$ISSUE_CODE" ]]; then
+    echo "Could not determine issue code from --goto value"
+    exit 1
+  fi
+
+  open_issue "$ISSUE_CODE"
+  exit 0
+fi
+
+# Check for -i or --interactive flag
+if $INTERACTIVE; then
+  echo "Fetching branches starting with $GITHUB_USERNAME..."
+  BRANCH=$(git branch --format="%(refname:short)" | grep "^$GITHUB_USERNAME" | gum choose)
+else
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+fi
+
+if [[ -z "$BRANCH" ]]; then
+  echo "No branch selected or found"
+  exit 1
+fi
+
+# Extract Linear issue code (like DEV-1234)
+ISSUE_CODE=$(echo "$BRANCH" | grep -oiE '[A-Z]+-[0-9]+')
+
+if [[ -z "$ISSUE_CODE" ]]; then
+  echo "No Linear issue code found in branch name"
+  exit 1
+fi
+
+open_issue "$ISSUE_CODE"
