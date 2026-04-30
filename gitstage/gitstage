@@ -1,0 +1,122 @@
+#!/bin/zsh
+
+gum --version >/dev/null 2>&1 || {
+  echo "gum is not installed. Please install it first." >&2
+  exit 1
+}
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  echo "gitstage must be run inside a Git repository." >&2
+  exit 1
+}
+
+tracked_files=()
+while IFS= read -r file_path; do
+  [[ -n "$file_path" ]] && tracked_files+=("$file_path")
+done <<EOF
+$(git diff --name-only)
+EOF
+
+untracked_files=()
+while IFS= read -r file_path; do
+  [[ -n "$file_path" ]] && untracked_files+=("$file_path")
+done <<EOF
+$(git ls-files --others --exclude-standard)
+EOF
+
+if [[ ${#tracked_files[@]} -eq 0 && ${#untracked_files[@]} -eq 0 ]]; then
+  echo "No unstaged or untracked files to stage." >&2
+  exit 0
+fi
+
+ACTION_TRACKED="[Tracked only]"
+ACTION_UNTRACKED="[Untracked only]"
+
+status_label_for_path() {
+  local file_path="$1"
+  local status_line
+
+  status_line=$(git status --short -- "$file_path" | sed -n '1p')
+  [[ -n "$status_line" ]] && printf '%s\n' "$status_line" || printf '%s\n' "$file_path"
+}
+
+typeset -A choice_to_value
+choices=("$ACTION_TRACKED" "$ACTION_UNTRACKED")
+
+choice_to_value["$ACTION_TRACKED"]="__action_tracked__"
+choice_to_value["$ACTION_UNTRACKED"]="__action_untracked__"
+
+for file_path in "${tracked_files[@]}"; do
+  status_label=$(status_label_for_path "$file_path")
+  choices+=("$status_label")
+  choice_to_value["$status_label"]="$file_path"
+done
+
+for file_path in "${untracked_files[@]}"; do
+  status_label=$(status_label_for_path "$file_path")
+  choices+=("$status_label")
+  choice_to_value["$status_label"]="$file_path"
+done
+
+selected=$(
+  printf '%s\n' "${choices[@]}" |
+    gum choose \
+      --no-limit \
+      --ordered \
+      --height=20 \
+      --header="Select files to stage. Space toggles. Enter confirms."
+)
+
+if [[ -z "$selected" ]]; then
+  echo "No files selected. Aborting." >&2
+  exit 0
+fi
+
+selected_paths=()
+selected_tracked=false
+selected_untracked=false
+
+while IFS= read -r item; do
+  [[ -z "$item" ]] && continue
+  case "${choice_to_value["$item"]}" in
+    "__action_tracked__")
+      selected_tracked=true
+      ;;
+    "__action_untracked__")
+      selected_untracked=true
+      ;;
+    *)
+      selected_paths+=("${choice_to_value["$item"]}")
+      ;;
+  esac
+done <<EOF
+$selected
+EOF
+
+[[ "$selected_tracked" == true ]] && selected_paths+=("${tracked_files[@]}")
+[[ "$selected_untracked" == true ]] && selected_paths+=("${untracked_files[@]}")
+
+deduped_paths=()
+for candidate in "${selected_paths[@]}"; do
+  [[ -z "$candidate" ]] && continue
+
+  already_added=false
+  for existing in "${deduped_paths[@]}"; do
+    if [[ "$existing" == "$candidate" ]]; then
+      already_added=true
+      break
+    fi
+  done
+
+  [[ "$already_added" == false ]] && deduped_paths+=("$candidate")
+done
+
+if [[ ${#deduped_paths[@]} -eq 0 ]]; then
+  echo "No files selected. Aborting." >&2
+  exit 0
+fi
+
+git add -- "${deduped_paths[@]}" || exit 1
+
+printf "Staged %d file(s):\n" "${#deduped_paths[@]}"
+printf '  %s\n' "${deduped_paths[@]}"

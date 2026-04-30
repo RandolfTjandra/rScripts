@@ -6,7 +6,7 @@ Each script lives in its own directory alongside a README that documents usage.
 
 ## Quick Setup
 
-To symlink the main utilities (`rebasepro`, `pushcommit`, `choose-root-branch`, `gojira`, `gol`, `switchbranch`) into your `~/bin` directory, run:
+To symlink the main utilities (`rebasepro`, `pushcommit`, `choose-root-branch`, `gojira`, `gol`, `switchbranch`, `gitstage`) into your `~/bin` directory, run:
 
 ```bash
 bash setup.sh
@@ -24,5 +24,6 @@ Directories:
 - `rebasepro` - interactive fixup and rebase helper
 - `choose-root-branch` - pick and cache a root branch for the current repo
 - `switchbranch` - choose from recent branches to check out
+- `gitstage` - interactively stage unstaged tracked files and untracked files
 - `git_alias` - sample Git aliases for branch creation
 - `pushcommit` - select a commit (relative to your root branch) and choose a branch to push it to

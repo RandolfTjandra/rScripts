@@ -6,6 +6,20 @@
 # Symlinks rScripts utilities into ~/bin/
 # Usage: bash setup_symlinks.sh
 
+IS_SOURCED=0
+if [ -n "${ZSH_VERSION:-}" ]; then
+    case "$ZSH_EVAL_CONTEXT" in
+        *:file) IS_SOURCED=1 ;;
+    esac
+elif [ -n "${BASH_VERSION:-}" ] && [ "${BASH_SOURCE[0]}" != "$0" ]; then
+    IS_SOURCED=1
+fi
+
+if [ "$IS_SOURCED" -eq 1 ]; then
+    echo "Run this script with 'bash setup.sh'. Do not source it." >&2
+    return 1 2>/dev/null || exit 1
+fi
+
 set -e
 
 UTILS=(
@@ -15,6 +29,7 @@ UTILS=(
     "gojira/gojira"
     "gol/gol"
     "switchbranch/switchbranch"
+    "gitstage/gitstage"
     "githooks/install-githooks"
 )
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
