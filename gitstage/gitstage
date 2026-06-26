@@ -48,8 +48,8 @@ colorize_status_label() {
   local color=""
 
   case "$xy" in
-    "??") color="\033[32m" ;;
-    " M"|"M "|"MM") color="\033[33m" ;;
+    " M"|"M ") color="\033[32m" ;;
+    "MM") color="\033[33m" ;;
     " D"|"D "|"DD") color="\033[31m" ;;
     "A "|"AM"|"AD") color="\033[32m" ;;
     "R "|" R"|"RM") color="\033[36m" ;;
