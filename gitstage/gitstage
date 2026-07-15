@@ -1,12 +1,44 @@
 #!/bin/zsh
 
-[[ -t 0 && -t 1 ]] || {
-  echo "gitstage requires an interactive terminal." >&2
+fzf --version >/dev/null 2>&1 || {
+  echo "fzf is not installed. Please install it first." >&2
   exit 1
 }
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
   echo "gitstage must be run inside a Git repository." >&2
+  exit 1
+}
+
+show_diff() {
+  local file_path="$1"
+
+  case "$file_path" in
+    "__action_tracked__"|"__action_untracked__")
+      echo "Move the cursor to a file to view its diff."
+      return
+      ;;
+  esac
+
+  command -v diff-so-fancy >/dev/null 2>&1 || {
+    echo "diff-so-fancy is not installed. Install it to view file diffs." >&2
+    return 1
+  }
+
+  if git ls-files --error-unmatch -- "$file_path" >/dev/null 2>&1; then
+    git diff --no-ext-diff -- "$file_path" | diff-so-fancy
+  else
+    git diff --no-index -- /dev/null "$file_path" 2>/dev/null | diff-so-fancy
+  fi
+}
+
+if [[ "$1" == "--show-diff" ]]; then
+  show_diff "$2"
+  exit $?
+fi
+
+[[ -t 0 && -t 1 ]] || {
+  echo "gitstage requires an interactive terminal." >&2
   exit 1
 }
 
@@ -31,7 +63,6 @@ fi
 
 ACTION_TRACKED="[Tracked only]"
 ACTION_UNTRACKED="[Untracked only]"
-MAX_VISIBLE_CHOICES=20
 
 status_label_for_path() {
   local file_path="$1"
@@ -64,196 +95,50 @@ colorize_status_label() {
   fi
 }
 
-count_selected_choices() {
-  local selected_count=0
-  local index
-
-  for ((index = 1; index <= ${#selected_flags[@]}; index++)); do
-    [[ "${selected_flags[index]}" == "1" ]] && ((selected_count++))
-  done
-
-  printf '%d\n' "$selected_count"
-}
-
-update_scroll_offset() {
-  if (( cursor_index < scroll_offset )); then
-    scroll_offset=$cursor_index
-  elif (( cursor_index >= scroll_offset + MAX_VISIBLE_CHOICES )); then
-    scroll_offset=$((cursor_index - MAX_VISIBLE_CHOICES + 1))
-  fi
-}
-
-move_cursor_up() {
-  if (( cursor_index > 1 )); then
-    ((cursor_index--))
-    update_scroll_offset
-  fi
-}
-
-move_cursor_down() {
-  if (( cursor_index < ${#choice_labels[@]} )); then
-    ((cursor_index++))
-    update_scroll_offset
-  fi
-}
-
-toggle_current_choice() {
-  if [[ "${selected_flags[cursor_index]}" == "1" ]]; then
-    selected_flags[cursor_index]=0
-  else
-    selected_flags[cursor_index]=1
-  fi
-}
-
-select_all_choices() {
-  local index
-
-  for ((index = 1; index <= ${#selected_flags[@]}; index++)); do
-    selected_flags[index]=1
-  done
-}
-
-render_selector() {
-  local total_choices=${#choice_labels[@]}
-  local window_end=$((scroll_offset + MAX_VISIBLE_CHOICES - 1))
-  local index
-  local cursor_marker
-  local selection_marker
-
-  (( window_end > total_choices )) && window_end=$total_choices
-
-  printf '\033[H\033[2J'
-  printf 'Select files to stage. Space toggles and moves down. Enter confirms.\n'
-  printf 'Use arrow keys or j/k to move. Ctrl+A selects all. q cancels.\n\n'
-
-  for ((index = scroll_offset; index <= window_end; index++)); do
-    cursor_marker="  "
-    selection_marker="[ ]"
-
-    (( index == cursor_index )) && cursor_marker="> "
-    [[ "${selected_flags[index]}" == "1" ]] && selection_marker="[x]"
-
-    printf '%s%s %s\n' "$cursor_marker" "$selection_marker" "${display_labels[index]}"
-  done
-
-  if (( total_choices > MAX_VISIBLE_CHOICES )); then
-    printf '\nShowing %d-%d of %d\n' "$scroll_offset" "$window_end" "$total_choices"
-  else
-    printf '\n%d item(s)\n' "$total_choices"
-  fi
-
-  printf '%s selected\n' "$(count_selected_choices)"
-}
-
-cleanup_selector() {
-  [[ -n "$original_stty_state" ]] && stty "$original_stty_state" >/dev/null 2>&1
-
-  if [[ "$selector_active" == true ]]; then
-    printf '\033[?25h\033[?1049l'
-    selector_active=false
-  fi
-}
-
-run_selector() {
-  local key
-  local next_key
-  local arrow_key
-
-  original_stty_state=$(stty -g)
-  selector_active=true
-
-  printf '\033[?1049h\033[?25l'
-  stty -echo -icanon min 1 time 0
-
-  while true; do
-    render_selector
-
-    IFS= read -rsk1 key || return 1
-
-    case "$key" in
-      $'\n'|$'\r')
-        return 0
-        ;;
-      ' ')
-        toggle_current_choice
-        move_cursor_down
-        ;;
-      'j')
-        move_cursor_down
-        ;;
-      'k')
-        move_cursor_up
-        ;;
-      'q')
-        return 1
-        ;;
-      $'\001')
-        select_all_choices
-        ;;
-      $'\e')
-        IFS= read -rsk1 -t 0.01 next_key || continue
-        if [[ "$next_key" == "[" ]]; then
-          IFS= read -rsk1 -t 0.01 arrow_key || continue
-          case "$arrow_key" in
-            A)
-              move_cursor_up
-              ;;
-            B)
-              move_cursor_down
-              ;;
-          esac
-        fi
-        ;;
-    esac
-  done
-}
-
-choice_labels=("$ACTION_TRACKED" "$ACTION_UNTRACKED")
-display_labels=("$ACTION_TRACKED" "$ACTION_UNTRACKED")
-choice_values=("__action_tracked__" "__action_untracked__")
+choices=(
+  "$ACTION_TRACKED"$'\t'"__action_tracked__"
+  "$ACTION_UNTRACKED"$'\t'"__action_untracked__"
+)
 
 for file_path in "${tracked_files[@]}"; do
   status_label=$(status_label_for_path "$file_path")
-  choice_labels+=("$status_label")
-  display_labels+=("$(colorize_status_label "$status_label")")
-  choice_values+=("$file_path")
+  display_label=$(colorize_status_label "$status_label")
+  choices+=("$display_label"$'\t'"$file_path")
 done
 
 for file_path in "${untracked_files[@]}"; do
   status_label=$(status_label_for_path "$file_path")
-  choice_labels+=("$status_label")
-  display_labels+=("$(colorize_status_label "$status_label")")
-  choice_values+=("$file_path")
+  display_label=$(colorize_status_label "$status_label")
+  choices+=("$display_label"$'\t'"$file_path")
 done
 
-selected_flags=()
-for file_path in "${choice_labels[@]}"; do
-  selected_flags+=(0)
-done
+selected=$(
+  printf '%s\n' "${choices[@]}" |
+    fzf \
+      --multi \
+      --ansi \
+      --layout=reverse \
+      --delimiter=$'\t' \
+      --with-nth=1 \
+      --preview="${(q)0} --show-diff {2}" \
+      --preview-window="right,60%,hidden,border-left" \
+      --bind="space:toggle+down,ctrl-a:select-all,tab:toggle-preview" \
+      --header="Select files to stage. Space toggles and moves down. Tab toggles diff. Enter confirms."
+)
 
-cursor_index=1
-scroll_offset=1
-selector_active=false
-original_stty_state=""
-
-trap cleanup_selector EXIT INT TERM
-
-if ! run_selector; then
-  cleanup_selector
+if [[ -z "$selected" ]]; then
   echo "No files selected. Aborting." >&2
   exit 0
 fi
-
-cleanup_selector
 
 selected_paths=()
 selected_tracked=false
 selected_untracked=false
 
-for ((index = 1; index <= ${#choice_values[@]}; index++)); do
-  [[ "${selected_flags[index]}" == "1" ]] || continue
-
-  case "${choice_values[index]}" in
+while IFS= read -r item; do
+  [[ -z "$item" ]] && continue
+  item="${item#*$'\t'}"
+  case "$item" in
     "__action_tracked__")
       selected_tracked=true
       ;;
@@ -261,10 +146,12 @@ for ((index = 1; index <= ${#choice_values[@]}; index++)); do
       selected_untracked=true
       ;;
     *)
-      selected_paths+=("${choice_values[index]}")
+      selected_paths+=("$item")
       ;;
   esac
-done
+done <<EOF
+$selected
+EOF
 
 [[ "$selected_tracked" == true ]] && selected_paths+=("${tracked_files[@]}")
 [[ "$selected_untracked" == true ]] && selected_paths+=("${untracked_files[@]}")
