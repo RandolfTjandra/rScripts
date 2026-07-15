@@ -12,11 +12,12 @@ bash setup.sh
 export PATH="$HOME/bin:$PATH"
 ```
 
-`setup.sh` installs `choose-root-branch`, `gitstage`, `gojira`, `gol`, `install-githooks`, `pushcommit`, `rebasepro`, and `switchbranch`. Add the `PATH` export to your shell profile if `~/bin` is not already on your path.
+`setup.sh` installs `choose-root-branch`, `gitshow`, `gitstage`, `gojira`, `gol`, `install-githooks`, `pushcommit`, `rebasepro`, and `switchbranch`. Add the `PATH` export to your shell profile if `~/bin` is not already on your path.
 
 ## Commands
 
 - [`gitstage`](#gitstage) — interactively stage changed and untracked files
+- [`gitshow`](#gitshow) — browse recent commits and open their diffs
 - [`switchbranch`](#switchbranch) — switch among relevant local branches
 - [`choose-root-branch`](#choose-root-branch) — select and remember a repository's base branch
 - [`rebasepro`](#rebasepro) — fix up an earlier commit and autosquash it
@@ -46,6 +47,26 @@ Inside the picker:
 The `[Tracked only]` and `[Untracked only]` rows make common bulk operations a single selection. Already staged-only files are omitted; files with both staged and unstaged changes remain available so their remaining edits can be staged.
 
 Requirements: Git, `fzf`, an interactive terminal, and `diff-so-fancy` for previews. See [gitstage/README.md](gitstage/README.md) for the full behavior reference.
+
+## `gitshow`
+
+Browse recent commits with `fzf` and open any commit's full diff through `diff-so-fancy` — no more copy-pasting hashes into `git show`. The list defaults to the current branch's commits ahead of the root branch selected with `choose-root-branch`.
+
+```bash
+gitshow
+gitshow --reset
+```
+
+Inside the picker:
+
+- `Enter` or `→` focuses the highlighted commit's diff in a scrollable `less` view; `q` returns to the list in place.
+- `←` switches to a branch picker (local branches first, then `origin/*`, sorted by recent activity); selecting a branch lists its recent commits instead.
+- `Tab` toggles the diff preview.
+- `Esc` quits the commit list, or steps back from the branch picker.
+
+The per-branch commit list is capped at 30 entries; override with `GITSHOW_LIMIT`. Pass `--reset` to reselect the root branch first.
+
+Requirements: Git, `fzf`, `gum`, `choose-root-branch`, an `origin` remote, an interactive terminal, and `diff-so-fancy` for pretty diffs. See [gitshow/README.md](gitshow/README.md).
 
 ## `switchbranch`
 

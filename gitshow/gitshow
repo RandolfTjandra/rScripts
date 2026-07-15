@@ -1,0 +1,152 @@
+#!/bin/zsh
+
+fzf --version >/dev/null 2>&1 || {
+  echo "fzf is not installed. Please install it first." >&2
+  exit 1
+}
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  echo "gitshow must be run inside a Git repository." >&2
+  exit 1
+}
+
+COMMIT_LIMIT=${GITSHOW_LIMIT:-30}
+LOG_FORMAT='%C(yellow)%h%C(reset)%C(auto)%d%C(reset) %s %C(cyan)(%cr)%C(reset)%x09%h'
+PREVIEW_LOG_FORMAT='%C(yellow)%h%C(reset) %s %C(cyan)(%cr)%C(reset)'
+DEFAULT_BRANCH_VALUE="__default__"
+
+render_diff() {
+  if command -v diff-so-fancy >/dev/null 2>&1; then
+    diff-so-fancy
+  else
+    cat
+  fi
+}
+
+if [[ "$1" == "--show-diff" ]]; then
+  git show --color=always "$2" | render_diff
+  exit $?
+fi
+
+if [[ "$1" == "--view-diff" ]]; then
+  command -v less >/dev/null 2>&1 || {
+    echo "less is not installed. Install it to scroll commit diffs." >&2
+    exit 1
+  }
+
+  git show --color=always "$2" | render_diff | less -R
+  exit ${pipestatus[1]}
+fi
+
+if [[ "$1" == "--show-branch" ]]; then
+  if [[ "$2" == "$DEFAULT_BRANCH_VALUE" ]]; then
+    [[ -n "$ROOT_BRANCH" ]] && git log --color=always --format="$PREVIEW_LOG_FORMAT" HEAD ^origin/"$ROOT_BRANCH" -- 2>/dev/null
+  else
+    git log --color=always --format="$PREVIEW_LOG_FORMAT" -n "$COMMIT_LIMIT" "$2" --
+  fi
+  exit $?
+fi
+
+[[ -t 0 && -t 1 ]] || {
+  echo "gitshow requires an interactive terminal." >&2
+  exit 1
+}
+
+command -v choose-root-branch >/dev/null 2>&1 || {
+  echo "choose-root-branch command not found. Please run setup.sh or add it to your PATH." >&2
+  exit 1
+}
+ROOT_BRANCH=$(choose-root-branch "$@") || exit $?
+[[ -z "$ROOT_BRANCH" ]] && {
+  echo "Could not determine root branch 🤷" >&2
+  exit 1
+}
+export ROOT_BRANCH
+
+list_branches() {
+  {
+    git branch --sort=-committerdate --format='%(refname:short)'
+    git branch -r --sort=-committerdate --format='%(refname:short)'
+  } | awk '$0 != "origin" && $0 !~ /HEAD$/ && !seen[$0]++'
+}
+
+view="commits"
+BRANCH=""
+
+while true; do
+  if [[ "$view" == "commits" ]]; then
+    if [[ -z "$BRANCH" ]]; then
+      current_branch=$(git branch --show-current)
+      [[ -z "$current_branch" ]] && current_branch="HEAD"
+      commits=$(git log --color=always --format="$LOG_FORMAT" HEAD ^origin/"$ROOT_BRANCH" -- 2>/dev/null)
+      header="Commits on $current_branch vs origin/$ROOT_BRANCH."
+      if [[ -z "$commits" ]]; then
+        commits=$(git log --color=always --format="$LOG_FORMAT" -n "$COMMIT_LIMIT" HEAD --)
+        header="No commits ahead of origin/$ROOT_BRANCH. Recent commits on $current_branch."
+      fi
+    else
+      commits=$(git log --color=always --format="$LOG_FORMAT" -n "$COMMIT_LIMIT" "$BRANCH" -- 2>/dev/null)
+      header="Recent commits on $BRANCH."
+    fi
+
+    if [[ -z "$commits" ]]; then
+      echo "No commits to show." >&2
+      exit 0
+    fi
+
+    output=$(
+      printf '%s\n' "$commits" |
+        fzf \
+          --ansi \
+          --layout=reverse \
+          --delimiter=$'\t' \
+          --with-nth=1 \
+          --expect=left \
+          --preview="${(q)0} --show-diff {2}" \
+          --preview-window="right,60%,border-left" \
+          --bind="tab:toggle-preview,enter:execute(${(q)0} --view-diff {2}),right:execute(${(q)0} --view-diff {2})" \
+          --header="$header Enter/→ opens a scrollable diff; q returns. ← browses branches. Esc quits."
+    )
+
+    key="${output%%$'\n'*}"
+    if [[ "$key" == "left" ]]; then
+      view="branches"
+      continue
+    fi
+
+    exit 0
+  else
+    current_branch=$(git branch --show-current)
+    [[ -z "$current_branch" ]] && current_branch="HEAD"
+
+    branch_choices=("[$current_branch vs origin/$ROOT_BRANCH]"$'\t'"$DEFAULT_BRANCH_VALUE")
+    while IFS= read -r branch_name; do
+      [[ -n "$branch_name" ]] && branch_choices+=("$branch_name"$'\t'"$branch_name")
+    done <<EOF
+$(list_branches)
+EOF
+
+    branch_selection=$(
+      printf '%s\n' "${branch_choices[@]}" |
+        fzf \
+          --ansi \
+          --layout=reverse \
+          --delimiter=$'\t' \
+          --with-nth=1 \
+          --preview="${(q)0} --show-branch {2}" \
+          --preview-window="right,60%,border-left" \
+          --bind="tab:toggle-preview" \
+          --header="Choose a branch to browse. Enter shows its commits. Esc goes back."
+    )
+
+    if [[ -n "$branch_selection" ]]; then
+      branch_value="${branch_selection#*$'\t'}"
+      if [[ "$branch_value" == "$DEFAULT_BRANCH_VALUE" ]]; then
+        BRANCH=""
+      else
+        BRANCH="$branch_value"
+      fi
+    fi
+    view="commits"
+  fi
+done

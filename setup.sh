@@ -30,6 +30,7 @@ UTILS=(
     "gol/gol"
     "switchbranch/switchbranch"
     "gitstage/gitstage"
+    "gitshow/gitshow"
     "githooks/install-githooks"
 )
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
