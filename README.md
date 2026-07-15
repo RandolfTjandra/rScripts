@@ -114,11 +114,12 @@ Select one of your commits ahead of the root branch and push that exact commit t
 ```bash
 pushcommit
 pushcommit --branch randolf/dev-123-short-description
+pushcommit --branch randolf/dev-123-short-description --force
 ```
 
 ![pushcommit running in Kitty and selecting a commit and target branch](assets/pushcommit-demo.gif)
 
-If the remote branch does not exist, `pushcommit` creates it on `origin`. Pass `--reset` to reselect the root branch before choosing a commit.
+If the remote branch does not exist, `pushcommit` creates it on `origin`. Pass `--reset` to reselect the root branch before choosing a commit. After a rebase or commit reorder, pass `--force` to replace a remote branch tip that cannot be fast-forwarded; this is a destructive update, so verify the selected commit and target branch first.
 
 ### Practical use case: share the ready part of a branch
 
@@ -137,7 +138,7 @@ QA needs the checkout flow and validation now, but the latest polish commit is n
 pushcommit --branch randolf/dev-123-handoff
 ```
 
-The remote handoff branch ends at the validation commit, so it contains the flow and validation commits but excludes the later empty-state work. `pushcommit` does not cherry-pick a lone commit: it makes the selected commit the target branch tip, including all of that commit's ancestors. An existing remote target must accept the update as a normal Git push.
+The remote handoff branch ends at the validation commit, so it contains the flow and validation commits but excludes the later empty-state work. `pushcommit` does not cherry-pick a lone commit: it makes the selected commit the target branch tip, including all of that commit's ancestors. An existing remote target must accept the update as a normal Git push unless you explicitly pass `--force`.
 
 Requirements: Git, `gum`, `choose-root-branch`, an `origin` remote, and a configured Git `user.name` when selecting a branch interactively. See [pushcommit/README.md](pushcommit/README.md).
 

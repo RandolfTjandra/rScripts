@@ -11,13 +11,18 @@ ROOT_BRANCH=$(choose-root-branch "$@") || exit $?
 }
 
 TARGET_BRANCH=""
+FORCE_PUSH=false
 args=("$@")
 for ((idx=1; idx <= $#args; idx++)); do
-  if [[ "${args[idx]}" == "--branch" ]]; then
-    next_idx=$((idx + 1))
-    TARGET_BRANCH="${args[next_idx]}"
-    break
-  fi
+  case "${args[idx]}" in
+    --branch)
+      next_idx=$((idx + 1))
+      TARGET_BRANCH="${args[next_idx]}"
+      ;;
+    --force)
+      FORCE_PUSH=true
+      ;;
+  esac
 done
 
 COMMITS=$(git log HEAD ^origin/"$ROOT_BRANCH" --oneline | awk 'NR==1{$0=$0" ← latest commit"} {print}')
@@ -46,8 +51,11 @@ fi
   exit 1
 }
 
+push_args=()
+[[ "$FORCE_PUSH" == true ]] && push_args+=(--force)
+
 if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
-  git push origin "${COMMIT_HASH}:${TARGET_BRANCH}"
+  git push "${push_args[@]}" origin "${COMMIT_HASH}:${TARGET_BRANCH}"
 else
-  git push origin "${COMMIT_HASH}:refs/heads/${TARGET_BRANCH}"
+  git push "${push_args[@]}" origin "${COMMIT_HASH}:refs/heads/${TARGET_BRANCH}"
 fi
