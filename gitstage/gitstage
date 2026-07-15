@@ -37,6 +37,16 @@ if [[ "$1" == "--show-diff" ]]; then
   exit $?
 fi
 
+if [[ "$1" == "--view-diff" ]]; then
+  command -v less >/dev/null 2>&1 || {
+    echo "less is not installed. Install it to scroll file diffs." >&2
+    exit 1
+  }
+
+  show_diff "$2" | less -R
+  exit ${pipestatus[1]}
+fi
+
 [[ -t 0 && -t 1 ]] || {
   echo "gitstage requires an interactive terminal." >&2
   exit 1
@@ -122,8 +132,8 @@ selected=$(
       --with-nth=1 \
       --preview="${(q)0} --show-diff {2}" \
       --preview-window="right,60%,border-left" \
-      --bind="space:toggle+down,ctrl-a:select-all,tab:toggle-preview" \
-      --header="Select files to stage. Space toggles and moves down. Tab toggles diff. Enter confirms."
+      --bind="space:toggle+down,ctrl-a:select-all,tab:toggle-preview,right:execute(${(q)0} --view-diff {2})" \
+      --header="Space selects. Right opens a scrollable diff; q returns. Tab toggles preview. Enter confirms."
 )
 
 if [[ -z "$selected" ]]; then
